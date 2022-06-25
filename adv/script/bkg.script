@@ -1,0 +1,67 @@
+go.property("anim", hash("none"))	
+go.property("align", hash("center"))	
+go.property("efx",0)	
+
+local pscreen_w=screen_w
+local pscreen_h=screen_h
+
+function init(self)
+	self.position=vmath.vector3()
+	msg.post("#sprite", "play_animation", { id = hash(self.anim) })
+	--msg.post(".","update")
+end
+
+function update_position(self)
+	local w
+	local h
+	self.width=go.get("#sprite", "size.x")
+	self.height=go.get("#sprite", "size.y")	
+	if true==false then --self.width<screen_w then
+		self.position.x=screen_w/2
+		w=screen_w
+		--w=self.width
+		background_leftshift=(screen_w-self.width)/2
+	else		
+		self.position.x=self.width/2
+		w=self.width
+		background_leftshift=0
+	end
+	if self.height<screen_h then
+		if self.align==hash("center") then
+			self.position.y=screen_h/2
+		elseif self.align==hash("top") then
+			self.position.y=screen_h-self.height/2
+		elseif self.align==hash("bottom") then
+			self.position.y=self.height/2
+		end
+		h=screen_h
+	else		
+		self.position.y=self.height/2
+		h=self.height
+	end
+	if self.efx==1 then
+		self.position.z=0.75
+	else		
+		self.position.z=-0.5
+	end
+	go.set_position(self.position)	
+	if self.efx==1 then
+	else
+		msg.post("camera", "set_area",{width=w,height=h})
+	end
+end
+
+function update(self, dt)
+	if screen_w==pscreen_w and screen_h==pscreen_h then
+	else
+		update_position(self)
+		pscreen_w=screen_w
+		pscreen_h=screen_h
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==hash("update") then
+		update_position(self)
+	end
+end

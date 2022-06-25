@@ -1,0 +1,19 @@
+images {
+  image: "/adv/img/venturi_bellearti.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/venturi_room.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/void.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/black.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+margin: 1
+extrude_borders: 0
+inner_padding: 0

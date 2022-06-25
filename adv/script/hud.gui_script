@@ -1,0 +1,1375 @@
+local hlp = require "adv/lua/minimalgui"
+local config = require "adv/lua/config"
+local adv = require "adv/lua/adventure"
+
+local cursor={}
+      hud={}
+local pscreen_w=screen_w
+local pscreen_h=screen_h
+local cursor_cross="cursor.cross"
+local cursor_active="cursor.active"
+local cursor_move="cursor.move"
+local cursor_moveN="cursor.move-N"
+local cursor_moveS="cursor.move-S"
+local cursor_moveE="cursor.move-E"
+local cursor_moveW="cursor.move-W"
+local cursor_arrow="cursor.arrow"
+
+local talkareafonth
+local selectedfonth
+
+local actions={}
+local actionsbkg={}
+
+local buttonselector={}
+
+local inventory={}
+local inventorybkg={}
+
+local actorselector={}
+local actorselectorbkg={}
+
+local textarray={}
+
+local colorrgb={}
+
+function hgui_init(self,name,rdad)
+	self.callstack={}
+	self.icallstack=0;		
+	colorrgb["white"]="#FFFFFF"
+	colorrgb["blue"]="#000080"
+	colorrgb["green"]="#008000"
+	colorrgb["red"]="#FF0000"
+	colorrgb["yellow"]="#FFFF00"
+	colorrgb["lightyellow"]="#FFFF80"
+	colorrgb["gray"]="#C0C0C0"
+	colorrgb["lightgray"]="#D0D0D0"
+	msg.post("hud", "setdad", {dad=rdad})
+end
+
+function hgui_show(self,name)
+	if adv.showdlg(self,name) then
+		hgui_push(self,name)		
+	end
+end
+
+function hgui_reset(self,name)
+	self.callstack={}
+	self.icallstack=0;	
+end
+
+function hgui_push(self,name)
+	local i=0
+	local fnd=-1
+	for i = 0, self.icallstack do
+		if self.callstack[i]==name then
+			fnd=i
+		end
+	end
+	if fnd==-1 then
+		self.icallstack=self.icallstack+1
+		self.callstack[self.icallstack]=name
+	else
+		self.icallstack=fnd
+	end	
+end
+
+function _hgui_back(self,quitapp)
+	if self.icallstack == 0 then
+		if quitapp==true then
+			msg.post("@system:", "exit", {code = 0})
+		end
+	else
+		self.icallstack=self.icallstack-1
+		if self.icallstack >= 0 then
+			local backto=self.callstack[self.icallstack]
+			adv.showdlg(self,message.what)
+			--msg.post(".", "playjson", { table = backto, autofade==0 })	
+		end
+	end
+end
+
+function hgui_back(self,quitapp)
+	if self.icallstack == 0 then
+		if quitapp==true then
+			msg.post("@system:", "exit", {code = 0})
+			return "@system"
+		else
+			return ""
+		end
+	else
+		self.icallstack=self.icallstack-1
+		if self.icallstack > 0 then
+			local backto=self.callstack[self.icallstack]
+			adv.showdlg(self,backto)			
+			--msg.post("hud", "playjson", { table = backto, autofade==0 })	
+			return backto
+		else			
+			return ""
+		end
+	end
+end
+
+function split(s, delimiter)
+	result = {};
+	for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+		table.insert(result, match);
+	end
+	return result;
+end
+
+function addtextelement(self,text,name,pos,btndad,collection)
+	local font="pixelfont"
+	local metrics=gui.get_text_metrics(font,text)
+	local nbtn=gui.new_text_node(pos,text)
+	gui.set_id(nbtn, name)	
+	gui.set_pivot(nbtn,gui.PIVOT_W)
+	gui.set_layer(nbtn,"front")
+
+	local item= {label=name,btn=nbtn,cmd=name,dad=btndad,pressed=false,reqpressed=false,scale=1.0,alpha=0.0}				
+	table.insert(self.abtns, item)	
+
+	if collection then
+		table.insert(collection, nbtn)	
+	end
+end
+
+function addicon(self,img,name,pos,wsize,btndad,collection,slice)
+	local atlas="hud"
+	local size=vmath.vector3(wsize.x,wsize.y,0)
+	local nbtn=gui.new_box_node(pos, size)
+	local color=vmath.vector4(1,1,1,0)	
+	if slice then
+		local cutpx=4
+		local cut=vmath.vector4(cutpx,cutpx,cutpx,cutpx)
+		gui.set_slice9(nbtn, cut)
+	else
+		gui.set_size_mode(nbtn,gui.SIZE_MODE_AUTO)
+	end
+	gui.set_texture(nbtn,atlas)
+	gui.play_flipbook(nbtn,img)									
+	if name then
+		gui.set_id(nbtn, name)	
+	end
+	gui.set_color(nbtn, color)	
+	gui.set_layer(nbtn,"front")
+
+	if slice then
+	else
+		local item= {label=name,btn=nbtn,cmd=name,dad=btndad,pressed=false,reqpressed=false,scale=1.0,alpha=0.0}				
+		table.insert(self.abtns, item)	
+	end
+
+	if collection then
+		table.insert(collection, nbtn)	
+	end
+end
+
+function addlabel(self,label,name,pos,wsize,btndad,collection)
+	local font="pixelfont"
+	local metrics=gui.get_text_metrics(font,label)	
+	local size=vmath.vector3(wsize.x,wsize.y,0)	
+	local color=vmath.vector4(1,1,1,0)
+
+	local nbtn=gui.new_text_node(pos,label)
+	
+	gui.set_id(nbtn, name)	
+	gui.set_color(nbtn, color)	
+	gui.set_layer(nbtn,"front")
+
+	local item= {label=name,btn=nbtn,cmd=name,dad=btndad,pressed=false,reqpressed=false,scale=1.0,alpha=0.0}				
+	table.insert(self.abtns, item)	
+
+	if collection then
+		table.insert(collection, nbtn)	
+	end
+end
+
+function getpos(self,size,grid,i,hm,anchor,mode)
+	local pos,xx,yy
+	local w=size.x
+	local h=size.y
+	local x=0
+	local y=0
+	local hm=1
+	local vscreen_w=screen_w
+	local vofx=(screen_w-vscreen_w)/2
+	local offset=split(anchor,"+")	
+	local shift=0
+	if offset[2] then
+		anchor=offset[1]
+		shift=tonumber(offset[2])
+	end
+	if grid then
+		y=math.floor((i-1)/grid.x)
+		x=(i-1)%grid.x
+		hm=grid.x
+	end
+	if anchor=="topleft" then
+		xx=w*(x)+w/2
+		yy=screen_h-h/2-y*h
+	elseif anchor=="topcenter" then
+		xx=screen_w/2
+		yy=screen_h-h/2-y*h
+	elseif anchor=="bottomleft" then
+		xx=w*(x)+w/2
+		if grid then
+			yy=h/2+(grid.y-y-1)*h
+		else
+			yy=h/2
+		end
+	elseif anchor=="topright" then
+		xx=vscreen_w-w/2-w*(hm-x-1)
+		yy=screen_h-h/2-y*h
+	elseif anchor=="bottomright" then
+		xx=vscreen_w-w/2-w*(hm-x-1)-shift
+		if grid then
+			yy=h/2+(grid.y-y-1)*h
+		else
+			yy=h/2
+		end
+	elseif anchor=="bottomright2" then
+		if adv.actorselector then
+			vscreen_w=adv.actorselector.hud.pos.x-adv.actorselector.hud.size.x/2-1
+		end
+		xx=vscreen_w-w/2-w*(hm-x-1)		
+		yy=h/2+(grid.y-y-1)*h
+	elseif anchor=="bottomcenter" or anchor=="bottom" then
+		xx=vscreen_w/2
+		if grid then
+			yy=h/2+(grid.y-y-1)*h
+		else
+			yy=h/2
+		end
+	elseif anchor=="inventory_left" then
+		yy=adv.inventory.hud.pos.y+adv.inventory.size.y/2-h/2
+		xx=adv.inventory.hud.pos.x-adv.inventory.hud.size.x/2-w/2
+	elseif anchor=="inventory_right" then
+		yy=adv.inventory.hud.pos.y+adv.inventory.size.y/2-h/2
+		xx=adv.inventory.hud.pos.x+adv.inventory.hud.size.x/2+w/2		
+	elseif anchor=="smart" then
+		if adv.verbs.listcnt==0 then
+			yy=adv.inventory.hud.pos.y+adv.inventory.size.y/2-h/2
+		else
+			yy=adv.verbs.hud.pos.y+adv.verbs.hud.size.y/2-h/2
+		end
+		if mode==2 then
+			yy=yy-h
+		elseif mode==3 then
+			yy=yy-h*2
+		end
+		xx=(adv.verbs.hud.pos.x+adv.verbs.hud.size.x/2+adv.inventory.hud.pos.x-adv.inventory.hud.size.x/2)/2		
+		xx=adv.inventory.hud.pos.x-adv.inventory.hud.size.x/2-w/2
+	end
+	pos=vmath.vector3(xx+vofx,yy,0.1)
+	return pos
+end
+
+function sethudsize(self,ax,ay,bx,by)
+	local hud={}
+	hud.pos=vmath.vector3()
+	hud.size=vmath.vector3()
+	hud.pos.x=(ax+bx)/2
+	hud.pos.y=(ay+by)/2
+	hud.size.x=(bx-ax)
+	hud.size.y=-(by-ay)
+	return hud
+end
+
+function gui_addbtn(self,btndad,pause,cmd,mode,update)	
+	local pos=getpos(self,pause.size,nil,nil,nil,pause.anchor,mode)
+	if update then
+		local l=gui.get_node(cmd)	
+		gui.set_position(l,pos)		
+		gui.set_size(l,pause.size)
+	else
+		addicon(self,pause.icon,cmd,pos,pause.size,btndad,actions)
+	end	
+	pause.hud=sethudsize(self,pos.x-pause.size.x/2,pos.y+pause.size.y/2,pos.x+pause.size.x/2,pos.y-pause.size.y/2)
+end
+
+function gui_addbar(self,btndad,pause,cmd,mode,update)
+	pause.size.x=screen_w
+	local pos=getpos(self,pause.size,nil,nil,nil,pause.anchor,mode)
+	if update then
+		local l=gui.get_node(cmd)	
+		gui.set_position(l,pos)		
+		gui.set_size(l,pause.size)	
+	else
+		addicon(self,pause.icon,cmd,pos,pause.size,btndad,inventorybkg,4)
+	end
+	--pause.hud=sethudsize(self,pos.x-pause.size.x/2,pos.y+pause.size.y/2,pos.x+pause.size.x/2,pos.y-pause.size.y/2)
+end
+
+function tozero(area)
+	area.ax=0
+	area.bx=0
+	area.ay=0
+	area.by=0
+end
+
+function hud_addbtns(self,btndad,update)
+	local area={}
+	local icons
+
+	if adv.bottombar then
+		gui_addbar(self,btndad,adv.bottombar,"bottombar",1,update)
+	end
+
+	local verbscnt=adv.verbs.listcnt	
+	tozero(area)
+	if verbscnt and verbscnt>0 then		
+		for i, v in pairs(adv.verbs.list) do
+			local pos=getpos(self,adv.verbs.size,adv.verbs.grid,v.pos,verbscnt, adv.verbs.anchor)
+			if update then
+				local l=gui.get_node(v.cmd)	
+				gui.set_position(l,pos)		
+				if adv.verbs.blankicon then
+					l=gui.get_node("verb.bkg."..v.pos)	
+					gui.set_position(l,pos)		
+				end
+				if adv.verbs.labels then
+					l=gui.get_node("vbkg."..v.pos)
+					gui.set_position(l,pos)		
+				end
+			else
+				if adv.verbs.blankicon then
+					addicon(self,adv.verbs.blankicon,"verb.bkg."..v.pos,pos,adv.verbs.size,btndad,actionsbkg)
+				end
+				addicon(self,v.icon,v.cmd,pos,adv.verbs.size,btndad,actions)
+			end
+			if v.pos==1 then
+				area.ax=pos.x-adv.verbs.size.x/2
+				area.ay=pos.y+adv.verbs.size.y/2
+			elseif v.pos == verbscnt then
+				area.bx=pos.x+adv.verbs.size.x/2
+				area.by=pos.y-adv.verbs.size.y/2
+			end
+		end
+	end
+	adv.verbs.hud=sethudsize(self,area.ax,area.ay,area.bx,area.by)
+
+	if adv.buttonselector then
+		tozero(area)
+		for i = 1, 2 do
+			local pos=getpos(self,adv.buttonselector.size,adv.buttonselector.grid,i,adv.buttonselector.count,adv.buttonselector.anchor)		
+			if update then
+				local l=gui.get_node("btnsel."..i)	
+				gui.set_position(l,pos)		
+				if buttonselector.blankicon then
+					l=gui.get_node("btnsel.bkg."..i)	
+					gui.set_position(l,pos)		
+				end
+			else
+				if adv.buttonselector.blankicon then
+					addicon(self,adv.buttonselector.blankicon,"btnsel.bkg."..i,pos,adv.buttonselector.size,btndad,buttonselectorbkg)
+				end
+				if i==1 then
+					addicon(self,"leftbtn.enabled","btnsel."..i,pos,adv.verbs.size,btndad,buttonselector)
+				else
+					addicon(self,"rightbtn.disabled","btnsel."..i,pos,adv.verbs.size,btndad,buttonselector)
+				end
+			end
+			if i==1 then
+				area.ax=pos.x-adv.buttonselector.size.x/2
+				area.ay=pos.y+adv.buttonselector.size.y/2
+			elseif i == adv.buttonselector.count then
+				area.bx=pos.x+adv.buttonselector.size.x/2
+				area.by=pos.y-adv.buttonselector.size.y/2
+			end
+		end
+		adv.buttonselector.hud=sethudsize(self,area.ax,area.ay,area.bx,area.by)	
+	end
+
+	if adv.actorselector then
+		tozero(area)
+		for i = 1, adv.actorselector.count do
+			local pos=getpos(self,adv.actorselector.size,adv.actorselector.grid,i,adv.actorselector.count,adv.actorselector.anchor)		
+			if update then
+				local l=gui.get_node("act."..i)	
+				gui.set_position(l,pos)		
+				if adv.actorselector.blankicon then
+					l=gui.get_node("act.bkg."..i)	
+					gui.set_position(l,pos)		
+				end
+			else
+				local blankicon
+				if adv.actorselector.selected and adv.actorselector.selected==i and adv.actorselector.blankiconsel then
+					blankicon=adv.actorselector.blankiconsel
+				else
+					blankicon=adv.actorselector.blankicon
+				end
+				if blankicon then
+					addicon(self,blankicon,"act.bkg."..i,pos,adv.actorselector.size,btndad,actorselectorbkg)
+				end
+				addicon(self,"void","act."..i,pos,adv.verbs.size,btndad,actorselector)
+			end
+			if i==1 then
+				area.ax=pos.x-adv.actorselector.size.x/2
+				area.ay=pos.y+adv.actorselector.size.y/2
+			elseif i == adv.actorselector.count then
+				area.bx=pos.x+adv.actorselector.size.x/2
+				area.by=pos.y-adv.actorselector.size.y/2
+			end
+		end
+		adv.actorselector.hud=sethudsize(self,area.ax,area.ay,area.bx,area.by)	
+	end	
+
+	tozero(area)
+	if adv.inventory.blankiconbar then
+		for i = 1, adv.inventory.count do
+			local pos=getpos(self,adv.inventory.size,adv.inventory.grid,i,adv.inventory.count,adv.inventory.anchor)				
+			if i==1 then
+				area.ax=pos.x-adv.inventory.size.x/2
+				area.ay=pos.y+adv.inventory.size.y/2
+			elseif i == adv.inventory.count then
+				area.bx=pos.x+adv.inventory.size.x/2
+				area.by=pos.y-adv.inventory.size.y/2
+			end
+		end
+		adv.inventory.hud=sethudsize(self,area.ax,area.ay,area.bx,area.by)			
+		if update then
+			for i = 1, adv.inventory.count do
+				local pos=getpos(self,adv.inventory.size,adv.inventory.grid,i,adv.inventory.count,adv.inventory.anchor)				
+				local l=gui.get_node("inv."..i)	
+				gui.set_position(l,pos)		
+				if adv.inventory.blankicon then
+					l=gui.get_node("inv.bkg."..i)	
+					gui.set_position(l,pos)		
+				end
+			end	
+		else
+			addicon(self,adv.inventory.blankiconbar,"inv.bkg",adv.inventory.hud.pos,adv.inventory.hud.size,btndad,inventorybkg,4)
+			for i = 1, adv.inventory.count do
+				local pos=getpos(self,adv.inventory.size,adv.inventory.grid,i,adv.inventory.count,adv.inventory.anchor)				
+				addicon(self,"void","inv."..i,pos,adv.verbs.size,btndad,inventory)
+			end	
+		end				
+	else
+		for i = 1, adv.inventory.count do
+			local pos=getpos(self,adv.inventory.size,adv.inventory.grid,i,adv.inventory.count,adv.inventory.anchor)				
+			if update then
+				local l=gui.get_node("inv."..i)	
+				gui.set_position(l,pos)		
+				if adv.inventory.blankicon then
+					l=gui.get_node("inv.bkg."..i)	
+					gui.set_position(l,pos)
+				end
+			else	
+				if adv.inventory.blankicon then
+					addicon(self,adv.inventory.blankicon,"inv.bkg."..i,pos,adv.inventory.size,btndad,inventorybkg)
+				end
+				addicon(self,"void","inv."..i,pos,adv.inventory.size,btndad,inventory)
+				--local pos=vmath.vector3(24*(i-1)+12,screen_h-12,0.1)
+				if adv.inventory.cntsize then
+					addicon(self,"void","inv.cnt."..i,pos,adv.inventory.cntsize,btndad,inventory)
+				end
+			end
+			if i==1 then
+				area.ax=pos.x-adv.inventory.size.x/2
+				area.ay=pos.y+adv.inventory.size.y/2
+			elseif i == adv.inventory.count then
+				area.bx=pos.x+adv.inventory.size.x/2
+				area.by=pos.y-adv.inventory.size.y/2
+			end
+		end	
+		adv.inventory.hud=sethudsize(self,area.ax,area.ay,area.bx,area.by)			
+	end
+
+	if adv.pause then
+		gui_addbtn(self,btndad,adv.pause,"show+pause",1,update)
+	end	
+	if adv.inventoryleft then
+		gui_addbtn(self,btndad,adv.inventoryleft,"cmd_invleft",2,update)		
+	end	
+	if adv.inventoryright then
+		gui_addbtn(self,btndad,adv.inventoryright,"cmd_invright",3,update)		
+	end	
+end
+
+function hud_settextareas(self)
+	local l=gui.get_node("selected")
+	gui.set_text(l, "lp")	
+	local metrics=gui.get_text_metrics_from_node(l)
+	local border=metrics.width
+	selectedfontw=metrics.width
+	selectedfonth=metrics.height
+	gui.set_text(l, "")
+	gui.set_position(l, vmath.vector3(screen_w/2,metrics.height,0))
+	gui.set_size(l, vmath.vector3(screen_w-border*2,metrics.height,0))
+	
+	l=gui.get_node("talkarea")
+	gui.set_text(l, "lp")	
+	metrics=gui.get_text_metrics_from_node(l)
+	talkareafontw=metrics.width
+	talkareafonth=metrics.height
+	gui.set_text(l, "")
+	gui.set_position(l, vmath.vector3(screen_w/2,screen_h-metrics.height,0))
+	gui.set_size(l, vmath.vector3(screen_w-border*2,metrics.height,0))
+
+	l=gui.get_node("label_title")
+	gui.set_text(l, "lp")	
+	metrics=gui.get_text_metrics_from_node(l)
+	titlefontw=metrics.width
+	titlefonth=metrics.height
+	gui.set_text(l, "")
+	gui.set_position(l, vmath.vector3(screen_w/2,screen_h-metrics.height,0))
+	gui.set_size(l, vmath.vector3(screen_w-border*2,metrics.height,0))
+
+	l=gui.get_node("label_subtitle")
+	gui.set_text(l, "lp")	
+	metrics=gui.get_text_metrics_from_node(l)
+	subtitlefontw=metrics.width
+	subtitlefonth=metrics.height
+	gui.set_text(l, "")
+	gui.set_position(l, vmath.vector3(screen_w/2,screen_h-metrics.height,0))
+	gui.set_size(l, vmath.vector3(screen_w-border*2,metrics.height,0))
+
+	l=gui.get_node("label_status")
+	gui.set_text(l, "lp")	
+	metrics=gui.get_text_metrics_from_node(l)
+	statusfontw=metrics.width
+	statusfonth=metrics.height
+	gui.set_text(l, "")
+	gui.set_position(l, vmath.vector3(screen_w/2,metrics.height,0))
+	gui.set_size(l, vmath.vector3(screen_w-border*2,metrics.height,0))
+		
+end
+
+function init_gui(self,btndad)
+		
+	hud_addbtns(self,btndad)
+
+	pscreen_w=screen_w
+	pscreen_h=screen_h
+
+	
+end
+
+function init(self)
+	gui_init(self)
+
+	cursor.status=0
+	cursor.visibile=1
+	cursor.obj=gui.get_node("cursor")
+	cursor.actionprefix=nil
+	cursor.width=0
+	cursor.position=vmath.vector3()
+
+	hud.enabled=false
+	hud.enabledverbs=false
+	
+	hud_settextareas(self)
+	
+end
+
+function actionicon_enable(self,enable)
+	local color
+	if enable==false then
+		color=vmath.vector4(1,1,1,0)
+	else
+		color=vmath.vector4(1,1,1,1)
+	end
+	for i, l in ipairs(actionsbkg) do		
+		gui.animate(l, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.1, 0.0)	
+	end
+	for i, l in ipairs(actions) do		
+		gui.animate(l, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.1, 0.0)	
+	end
+end
+
+function inventoryicon_enable(self,enable)
+	local color
+	if enable==false then
+		color=vmath.vector4(1,1,1,0)
+	else
+		color=vmath.vector4(1,1,1,1)
+	end
+	for i, l in ipairs(inventorybkg) do		
+		gui.animate(l, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.1, 0.0)	
+	end
+	for i, l in ipairs(inventory) do		
+		gui.animate(l, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.1, 0.0)	
+	end
+end
+
+function btnselectoricon_enable(self,enable)
+	if adv.buttonselector then
+		local color
+		if enable==false then
+			color=vmath.vector4(1,1,1,0)
+		else
+			color=vmath.vector4(1,1,1,1)
+		end
+		for i, l in ipairs(buttonselector) do		
+			gui.animate(l, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.1, 0.0)	
+		end
+	end
+end
+
+function actselectoricon_enable(self,enable)
+	if adv.actorselector then
+		local color
+		if enable==false then
+			color=vmath.vector4(1,1,1,0)
+		else
+			color=vmath.vector4(1,1,1,1)
+		end
+		for i, l in ipairs(actorselectorbkg) do		
+			gui.animate(l, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.1, 0.0)	
+		end
+		for i, l in ipairs(actorselector) do		
+			gui.animate(l, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.1, 0.0)	
+		end
+	end
+end
+
+function hudicon_enable(self,enable)
+	if enable==false then
+		color=vmath.vector4(1,1,1,0)
+	else
+		color=vmath.vector4(1,1,1,1)
+	end
+
+	--l=gui.get_node("pause")		
+	--gui.set_color(l, color)
+end
+
+function cursor_enable(self,enable)
+	if enabel==-1 then
+		l=gui.get_node("cursor")		
+		color=vmath.vector4(1,1,1,1)
+		gui.set_color(l, color)		
+		l=gui.get_node("selected")		
+		color=vmath.vector4(1,1,1,0)
+		gui.set_color(l, color)
+	else
+		if enable==false then
+			color=vmath.vector4(1,1,1,0)
+		else
+			color=vmath.vector4(1,1,1,1)
+		end
+
+		l=gui.get_node("cursor")		
+		gui.set_color(l, color)
+		l=gui.get_node("selected")		
+		gui.set_color(l, color)
+	end
+end
+
+function hud_enable(self,enable)
+	if enable==-3 then
+		cursor_enable(self,true)
+	elseif enable==-2 then
+		cursor_enable(self,false)
+	elseif enable==-1 then
+		hud.enabled=false
+		hud.enabledverbs=false
+		actionicon_enable(self,false)
+		inventoryicon_enable(self,false)
+		actselectoricon_enable(self,false)
+		btnselectoricon_enable(self,false)
+		hudicon_enable(self,false)
+		cursor_enable(self,-1)
+	else
+		local enablebool=enable>0
+		local enablebool2=enable>1
+		hud.enabled=enablebool
+		hud.enabledverbs=enablebool2
+		actionicon_enable(self,enablebool2)
+		inventoryicon_enable(self,enablebool2)
+		actselectoricon_enable(self,enablebool2)
+		btnselectoricon_enable(self,enablebool2)
+		hudicon_enable(self,enablebool2)
+		cursor_enable(self,enablebool)
+	end
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	gui_update(self,dt)
+	if screen_w==pscreen_w and screen_h==pscreen_h then
+	else
+		
+		hud_addbtns(self,btndad,true)		
+		
+		hud_settextareas(self)		
+
+		pscreen_w=screen_w
+		pscreen_h=screen_h
+	end
+end
+
+function hex2rgb(hex)
+	hex = hex:gsub("#","")
+	return tonumber("0x"..hex:sub(1,2)), tonumber("0x"..hex:sub(3,4)), tonumber("0x"..hex:sub(5,6))
+end
+
+function color2vect(colorname)
+	local color=vmath.vector4()
+	local colorhex="#FFFFFF"	
+   if colorname then
+		if colorrgb[colorname] then
+			colorhex=colorrgb[colorname]
+		else
+			colorhex=colorname		
+		end
+	end	
+	local r,g,b=hex2rgb(colorhex)
+	color.x=r/255
+	color.y=g/255
+	color.z=b/255
+	return color
+end
+
+function settalkareacolor(colorname)
+	local l=gui.get_node("talkarea")
+	local color=gui.get_color(l)
+	local colorhex="#FFFFFF"
+   if colorname then
+		if colorrgb[colorname] then
+			colorhex=colorrgb[colorname]
+		else
+			colorhex=colorname		
+		end
+	end	
+	local r,g,b=hex2rgb(colorhex)
+	color.x=r/255
+	color.y=g/255
+	color.z=b/255
+	gui.set_color(l, color)	
+end
+
+function digitalizepos(self,message,extra)
+	message.position.x=math.ceil(message.position.x)
+	message.position.y=math.ceil(message.position.y)
+	if extra then
+		message.position.x=message.position.x-0.5
+		message.position.y=message.position.y-0.5
+	end
+end
+
+local function on_hotspot_hide_done(self, url, property)
+	gui.delete_node(url)
+	adv.hotspots=nil
+end
+
+local function on_hotspot_show_done(self, url, property)
+	local color=vmath.vector4(1,1,1,0)	
+	gui.animate(url, gui.PROP_COLOR, color, gui.EASING_INOUTQUAD, 0.5, 0.5,on_hotspot_hide_done)					
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==hash("hud_create") then
+		init_gui(self,message.dad)
+	elseif message_id==hash("hud_updatelanguage") then
+		if adv.verbs.listcnt>0 then
+			for i, v in pairs(adv.verbs.list) do						
+				local l=gui.get_node(v.cmd)	
+				gui.play_flipbook(l,v.icon)		
+			end
+		end
+	elseif message_id==hash("cursor_reset") then
+		cursor.status=0
+		cursor.message=""
+		cursor.actionprefix=nil
+		cursor.dragicon=nil
+	elseif message_id==hash("cursor_setobj") then
+		local seltext=gui.get_node("selected")
+		if message.force~=true and cursor.status==message.status and (cursor.withmessage==message.desc or message.desc==nil) then
+		else
+			cursor.status=message.status	
+			cursor.withmessage=message.desc	or ""			
+			if cursor.status<=0 then
+				local action=cursor.actionprefix or ""
+				if cursor.dragicon then					
+					gui.set_text(seltext, cursor.message.." "..cursor.actionprepprefix)	
+				else
+					gui.play_flipbook(cursor.obj,cursor_cross)			
+					gui.set_text(seltext, action.." the "..cursor.message.." "..cursor.actionprepprefix)	
+				end				
+				metrics=gui.get_text_metrics_from_node(seltext)			
+				cursor.width=metrics["width"]
+				cursor.width=metrics["height"]				
+			else
+				local action
+				if cursor.status<=1 then
+					if adv.player then						
+						action=cursor.actionprefix or adv.verbs.walkto						
+						if cursor.message=="" then
+						else
+							if message.kind==20 or message.kind==21 then
+							elseif message.kind==30 then
+							else
+								action=action..adv.verbs.defart
+							end
+						end
+					else
+						action=cursor.actionprefix or ""
+					end					
+				else
+					action=cursor.actionprefix or adv.verbs.lookat
+					if cursor.message=="" then
+					else
+						if message.kind==20 or message.kind==21 then
+						elseif message.kind==30 then
+							action=adv.verbs.switchto
+						else
+							action=action..adv.verbs.defart
+						end
+					end
+				end
+				local out=action.." "..cursor.message				
+				if cursor.dragicon then
+					out=out.." "..cursor.actionprepprefix
+					if cursor.withmessage==nil or cursor.withmessage=="" then
+					else
+						if message.kind==20 or message.kind==21 then
+							out=out.." "..cursor.withmessage
+						elseif message.kind==30 then
+							out=out.." "..cursor.withmessage
+						else
+							out=out.." the "..cursor.withmessage
+						end
+					end
+				else			
+					if cursor.actionprepprefix then
+						out=out.." "..cursor.actionprepprefix
+						if cursor.withmessage==nil or cursor.withmessage=="" then
+						else
+							if message.kind==20 or message.kind==21 then
+								out=out.." "..cursor.withmessage
+							elseif message.kind==30 then
+								out=out.." "..cursor.withmessage
+							else
+								out=out.." the "..cursor.withmessage
+							end
+						end
+					end						
+					gui.play_flipbook(cursor.obj,cursor_active)
+				end
+				gui.set_text(seltext, out)	
+				metrics=gui.get_text_metrics_from_node(seltext)
+				cursor.width=metrics["width"]
+				cursor.width=metrics["height"]
+			end	
+		end
+		cursor.position.x=message.position.x
+		cursor.position.y=message.position.y
+		digitalizepos(self,cursor,1)
+		gui.set_position(cursor.obj, cursor.position)
+		if message.position.y+24<screen_h then
+			message.position.y=message.position.y+12
+		else
+			message.position.y=message.position.y-12
+		end
+		if message.position.x-cursor.width/2<0 then
+			message.position.x=cursor.width/2
+		elseif message.position.x+cursor.width/2>screen_w then
+			message.position.x=screen_w-cursor.width/2
+		end
+		if adv.verbs.showmode=="dynamic" then
+
+		else			
+			if adv.verbs.showmode=="top" then
+				message.position.x=screen_w/2
+				message.position.y=screen_h-8
+			elseif adv.verbs.showmode=="aboveverbs" then
+				if hud.enabledverbs then
+					message.position.x=screen_w/2
+					message.position.y=adv.verbs.hud.pos.y+adv.verbs.hud.size.y/2+8
+				end
+			end
+		end		
+		digitalizepos(self,message)
+		if message.silent then
+			gui.set_text(seltext, "")	
+		else
+			gui.set_position(seltext, message.position)	
+		end
+	elseif message_id==hash("cursor_set") then
+		local seltext=gui.get_node("selected")
+		if message.force~=true and cursor.status==message.status and (cursor.message==message.desc or message.desc==nil) then
+		else
+			cursor.status=message.status	
+			cursor.message=message.desc	or ""			
+			if cursor.status<=0 then
+				if cursor.dragicon then
+				else				
+					local action=cursor.actionprefix or ""				
+					gui.play_flipbook(cursor.obj,cursor_cross)			
+					gui.set_text(seltext, action.."")	
+					metrics=gui.get_text_metrics_from_node(seltext)
+					cursor.width=metrics["width"]
+				end
+			else
+				local action
+				if cursor.status<=1 then
+					if adv.player then
+						if cursor.actionprefix==nil and message.autoaction then
+							action=message.autoaction
+						else
+							action=cursor.actionprefix or adv.verbs.walkto
+						end	
+						if cursor.message=="" then
+						else
+							if message.kind==20 or message.kind==21 then							
+							elseif message.kind==30 then
+							else
+								action=action..adv.verbs.defart
+							end
+						end
+					else
+						action=cursor.actionprefix or ""
+					end					
+				else
+					action=cursor.actionprefix or adv.verbs.lookat
+					if cursor.message=="" then
+					else
+						if message.kind==20 or message.kind==21 then
+						elseif message.kind==30 then
+							action=adv.verbs.switchto
+						else						
+							action=action..adv.verbs.defart
+						end
+					end
+				end
+				local out=action.." "..cursor.message
+				if cursor.actionprepprefix then
+					out=out.." "..cursor.actionprepprefix
+					if cursor.withmessage==nil or cursor.withmessage=="" then
+					else
+						out=out..adv.verbs.defart..cursor.withmessage
+					end
+				end
+				if cursor.dragicon then
+					if cursor.withmessage==nil or cursor.withmessage=="" then
+					else
+						out=out..adv.verbs.defart..cursor.withmessage
+					end
+				else				
+					if message.movedir then
+						gui.play_flipbook(cursor.obj,cursor_move.."-"..message.movedir)				
+					else
+						gui.play_flipbook(cursor.obj,cursor_active)				
+					end
+				end
+				gui.set_text(seltext, out)	
+				metrics=gui.get_text_metrics_from_node(seltext)
+				cursor.width=metrics["width"]
+			end	
+		end
+		if message.position then
+			cursor.position.x=message.position.x
+			cursor.position.y=message.position.y
+			digitalizepos(self,cursor,1)
+			gui.set_position(cursor.obj, cursor.position,1)
+			if message.position.y+24<screen_h then
+				message.position.y=message.position.y+12
+			else
+				message.position.y=message.position.y-12
+			end
+			if message.position.x-cursor.width/2<0 then
+				message.position.x=cursor.width/2
+			elseif message.position.x+cursor.width/2>screen_w then
+				message.position.x=screen_w-cursor.width/2
+			end
+			if adv.verbs.showmode=="dynamic" then
+
+			else				
+				if adv.verbs.showmode=="top" then
+					message.position.x=screen_w/2
+					message.position.y=screen_h-selectedfonth
+				elseif adv.verbs.showmode=="aboveverbs" then
+					if hud.enabledverbs then
+						message.position.x=screen_w/2
+						if adv.verbs.hud.size.y==0 then
+							message.position.y=adv.inventory.hud.pos.y+adv.inventory.hud.size.y/2+selectedfonth/2
+						else
+							message.position.y=adv.verbs.hud.pos.y+adv.verbs.hud.size.y/2+selectedfonth/2
+						end
+					end
+				end
+			end		
+			digitalizepos(self,message)
+			if message.silent then
+				gui.set_text(seltext, "")	
+			else
+				gui.set_position(seltext, message.position)	
+			end
+		end
+	elseif message_id==hash("showdlg") then	
+		local section={}
+		local cnt=#message.content.body
+		local h=math.ceil(selectedfonth+selectedfonth/2)
+		local hh=math.ceil(talkareafonth+talkareafonth/3)
+		local wh=hh*cnt+h
+		local y=(screen_h-wh)/2+wh
+		local fy=(screen_h-wh)/2+wh
+		local xborder=0.25
+		local thetitle=adv.gettrad(self,"hud",message.content.title)		
+		local metrics=gui.get_text_metrics("pixelfont",thetitle)
+		local sx=metrics.width
+		for i, v in ipairs(message.content.body) do
+			for k, vv in pairs(v) do
+				local text
+				if string.sub(k,1,1)=="$" then
+					local key=string.sub(k,2,5)
+					if key=="slot" or key=="auto" then
+						local idx=tonumber(string.sub(k,6))
+						if key=="auto" then
+							text="<autosave>"
+						else
+							text=config.saveslots[idx]
+						end
+					end
+				else
+					text=adv.gettrad(self,"hud",k)
+					--text=k
+				end
+				local metrics2=gui.get_text_metrics("smallpixelfont",text)
+				if metrics2.width > sx then
+					sx=metrics2.width
+				end
+			end
+		end
+		sx=sx+metrics.height*2
+		if sx < screen_w/2 then
+			sx=screen_w/2
+		end
+
+		xborder=(screen_w-sx)/2
+		
+		hud_enable(self,-1)
+		local frame={}
+		frame["img9"]=adv.dlgframetitle
+		frame["atlas"]="hud"
+		frame["xp"]=xborder
+		frame["yp"]=y
+		frame["wp"]=sx
+		frame["hp"]=h
+		table.insert(section,frame)
+		fy=y-h
+		local frame={}
+		frame["img9"]=adv.dlgframebody
+		frame["atlas"]="hud"
+		frame["xp"]=xborder
+		frame["yp"]=fy+1
+		frame["wp"]=sx
+		frame["hp"]=wh-h+2
+		table.insert(section,frame)
+		local text={}
+		text["text"]=thetitle
+		text["font"]="pixelfont"
+		text["x"]=0.5
+		text["color"]="yellow"
+		text["yp"]=y-h/2
+		y=y-h-hh/2
+		table.insert(section,text)
+		if config.saveslots == nil then
+			config.saveslots={}
+		end
+		for i, v in ipairs(message.content.body) do
+			for k, vv in pairs(v) do
+				local text={}
+				local disabled
+				if string.sub(k,1,1)=="$" then
+					local key=string.sub(k,2,5)
+					if key=="slot" or key=="auto" then
+						local idx=tonumber(string.sub(k,6))
+						if config.saveslots[idx]==nil then config.saveslots[idx]="empty" end
+						if key=="auto" then
+							if config.saveslots[idx]=="empty" then
+								text["text"]="empty"
+							else
+								text["text"]="<autosave>"
+							end
+						else
+							text["text"]=config.saveslots[idx]
+						end
+						if config.saveslots[idx]=="empty" then disabled=true end					
+					end
+				else
+					text["text"]=adv.gettrad(self,"hud",k)
+					--text["text"]=k
+				end
+				text["font"]="smallpixelfont"
+				text["x"]=0.5
+				text["yp"]=y
+				--text["hp"]=h
+				if disabled then
+					text["color"]="#C0C0C0"
+				end
+				if text["text"]=="empty" then
+					text["color"]="#C0C0C0"				
+					if string.find(vv,"go_load") then
+					else
+						text["cmd"]=vv
+					end
+				elseif vv=="$title" then
+					text["color"]="#BCD1FB"
+				elseif vv=="$text" then
+					text["color"]="#FFFFFF"
+				elseif string.find(vv,"go_") then
+					text["cmd"]=vv
+					if vv=="go_back" then
+						text["color"]="#F0F080"
+					else
+						text["color"]="#F0F0C0"
+					end
+				else
+					text["cmd"]="show+"..vv
+					text["color"]="#F0F0C0"
+				end								
+				--end
+				y=y-hh
+				table.insert(section,text)				
+			end			
+		end			
+		gui_playjson(self,section,self.jsondad,message.autofade)	
+	elseif message_id==hash("showdialog") then	
+		local section={}
+		local dialog=adv.dialogs[message.dialog]
+		local cnt=0
+		local hh=0--selectedfonth/2
+		local h=selectedfonth+selectedfonth/2
+		local y=cnt*h-hh
+		local frame={}
+		local metrics=gui.get_text_metrics("smallpixelfont","Text")
+		hud_enable(self,-1)
+		for i, v in ipairs(dialog) do
+			if v.condition then
+				if adv.checkconditions(self,v.condition,"_known") then
+					v.hidden=nil
+				else
+					v.hidden=true
+				end
+			end
+			if v.hidden then
+			else
+				cnt=cnt+1
+			end
+		end
+		y=cnt*h-hh-h/2
+		frame["img9"]=adv.dlgframebody
+		frame["atlas"]="hud"
+		frame["x"]=0
+		frame["yp"]=cnt*h+hh
+		frame["w"]=1
+		frame["hp"]=cnt*h+hh
+		table.insert(section,frame)		
+		for i, v in ipairs(dialog) do
+			if v.hidden then
+			else
+				local text={}			
+				text["text"]=v.text
+				text["textborder"]="no"
+				text["font"]="smallpixelfont"
+				text["xp"]=selectedfontw
+				text["wp"]=screen_w-selectedfontw*2
+				text["align"]="left"
+				text["yp"]=y
+				--text["hp"]=5
+				text["cmd"]="show+line_"..i
+				y=y-h
+				if v.already then
+					text["color"]="#C0C0C0"
+				end
+				table.insert(section,text)
+			end			
+		end			
+		gui_playjson(self,section,self.jsondad,message.autofade)	
+	elseif message_id==hash("action.setlabel") then		
+		if message.kind=="all" then
+			local labelarea=gui.get_node("label_title")
+			gui.set_text(labelarea, "" )	
+			labelarea=gui.get_node("label_subtitle")
+			gui.set_text(labelarea, "" )	
+			labelarea=gui.get_node("label_status")
+			gui.set_text(labelarea, "" )	
+		else
+			local labelarea=gui.get_node("label_"..message.kind)
+			local text=message.text
+			gui.set_text(labelarea, text )	
+			if message.kind=="title" then
+				gui.set_position(labelarea, vmath.vector3(screen_w/2,screen_h/2+titlefonth/2,0))
+			elseif message.kind=="subtitle" then
+				gui.set_position(labelarea, vmath.vector3(screen_w/2,screen_h/2+titlefonth/2-subtitlefonth*3/2,0))
+			elseif message.kind=="status" then
+				gui.set_position(labelarea, vmath.vector3(screen_w/2,statusfonth/2,0))
+			end
+		end
+	elseif message_id==hash("action.examine") then				
+		if message.desc=="" then
+			gui.set_text(gui.get_node("talkarea"), "")			
+		else
+			local desc=string.gsub (message.desc or "I don't see anything special about that","|","\n")
+			local tpos=message.pos
+			local tsize=message.size
+			local tcolor=message.color
+			gui.set_text(gui.get_node("selected"), "")
+			local talkarea=gui.get_node("talkarea")
+			gui.set_text(talkarea, desc )	
+			local metrics=gui.get_text_metrics_from_node(talkarea)
+			if tcolor then
+				settalkareacolor(tcolor)
+			end
+			if tpos then
+				local width=metrics["width"]		
+				local height=metrics["height"]		
+				local pos=vmath.vector3(tpos.x,tpos.y,0)
+				pos.y=pos.y+tsize.y/2+height
+				pos.x=pos.x-camerapos.x
+				if pos.y-height < 5 then
+					pos.y=5+height
+				elseif pos.y>screen_h-talkareafonth/2 then
+					pos.y=screen_h-talkareafonth/2
+				end
+				if pos.x-width/2 < 5 then
+					pos.x=5+width/2
+				elseif pos.x+width/2>screen_w-5 then
+					pos.x=screen_w-width/2-5
+				end					
+				pos.y=math.ceil(pos.y)
+				pos.x=math.ceil(pos.x)
+				gui.set_position(talkarea, pos)				
+			else
+				gui.set_position(talkarea, vmath.vector3(screen_w/2,screen_h-talkareafonth,0))
+			end
+			hud_enable(self, -2)
+		end
+	elseif message_id==hash("settextcolor") then
+		settalkareacolor(message.color)		
+	elseif message_id==hash("setdragicon") then
+		if cursor.dragicon==message.dragicon then
+		else
+			cursor.dragicon=message.dragicon
+			cursor.actionprepprefix=message.prefix
+			cursor.actionpcmd=message.cmd
+			gui.play_flipbook(cursor.obj,cursor.dragicon)			
+		end	
+	elseif message_id==hash("setactionprepprefix") then
+		if cursor.actionprepprefix==message.prefix then
+		else
+			cursor.actionprepprefix=message.prefix
+			cursor.actionpcmd=message.cmd
+			msg.post(".","cursor_setobj",{position=cursor.position,force=1,status=cursor.status})
+		end	
+	elseif message_id==hash("setactionprefix") then
+		if cursor.dragicon then
+			cursor.dragicon=nil
+				cursor.actionprefix=message.prefix
+				cursor.actionprepprefix=nil
+				msg.post(".","cursor_set",{position=cursor.position,status=-1,desc=cursor.message})
+
+		else
+			if cursor.actionprefix==message.prefix then
+				msg.post(".","cursor_set",{position=cursor.position,status=-1,desc=cursor.message})
+			else
+				cursor.actionprefix=message.prefix
+				cursor.actionprepprefix=nil
+				msg.post(".","cursor_set",{position=cursor.position,status=-1,desc=cursor.message})
+			end
+		end
+	elseif message_id==hash("updateval") then
+		local l=gui.get_node("inv.cnt."..message.id)
+		gui.play_flipbook(l,"cnt."..message.cnt)			
+	elseif message_id==hash("settextarray")	then
+		
+	elseif message_id==hash("hud_enable") then			
+		hud_enable(self,message.enable)
+	elseif message_id==hash("set_buttonselector") then			
+		if message.right then
+			local l=gui.get_node("btnsel.1")
+			gui.play_flipbook(l,"leftbtn.disabled")			
+			l=gui.get_node("btnsel.2")
+			gui.play_flipbook(l,"rightbtn.enabled")			
+		else
+			local l=gui.get_node("btnsel.1")
+			gui.play_flipbook(l,"leftbtn.enabled")			
+			l=gui.get_node("btnsel.2")
+			gui.play_flipbook(l,"rightbtn.disabled")			
+		end
+	elseif message_id==hash("hud_setinv") then
+		local num=tonumber(message.num)
+		if num > 0 and num <= adv.inventory.count then
+			local l=gui.get_node("inv."..message.num)		
+			if message.img then
+				gui.play_flipbook(l,message.img)
+			end
+			if message.val then
+				local l=gui.get_node("inv.cnt."..message.num)		
+				if l==nil then
+					local pos=vmath.vector3(24*(i-1)+12,screen_h-12,0.1)
+					addicon(self,"cnt."..message.val,"inv.cnt."..message.num,pos,nil,inventory)
+				else
+					gui.play_flipbook(l,"cnt."..message.val)		
+				end
+			end
+		end
+	elseif message_id==hash("hud_showhotspots") then		
+		local atlas="hud"
+		if adv.hotspots==nil then
+			local ratio_x=1--screen_width/screen_w
+			local ratio_y=1--screen_height/screen_h			
+			for i,obj in ipairs(adv.elements) do
+				if obj.disabled==nil and obj.decalc==nil and obj.visible==true then 
+					local camera=message.camera
+					local pos=vmath.vector3(obj.pos.x*ratio_x-camera.x,obj.pos.y*ratio_y-camera.y,0)
+					local size=vmath.vector3(15,15,0)
+					local nbtn=gui.new_box_node(pos, size)
+					local color=vmath.vector4(1,1,1,0)	
+					local fullcolor=vmath.vector4(1,1,1,1)	
+					adv.hotspots=1
+					gui.set_texture(nbtn,atlas)
+					if obj.movedir then						
+						gui.play_flipbook(nbtn,"cursor.move-"..obj.movedir)									
+					else
+						gui.play_flipbook(nbtn,"cursor.active")									
+					end
+					gui.set_color(nbtn, color)	
+					gui.set_layer(nbtn,"front")
+					gui.animate(nbtn, gui.PROP_COLOR, fullcolor, gui.EASING_INOUTQUAD, 0.5, 0,on_hotspot_show_done)					
+				end
+			end	
+		end
+	elseif message_id==hash("hud_setactsel") then
+		local num=tonumber(message.num)
+		if num > 0 and num <= adv.actorselector.count then			
+			if message.sel then
+				local l=gui.get_node("act.bkg."..message.num)									
+				if message.sel==1 then
+					local sel=adv.actorselector.blankiconsel
+					if sel then gui.play_flipbook(l,sel) end
+				else
+					local base=adv.actorselector.blankicon
+					if base then gui.play_flipbook(l,base) end
+				end
+			end
+			if message.img then
+				local l=gui.get_node("act."..message.num)		
+				gui.play_flipbook(l,message.img)
+				if num==1 or num==3 then
+					gui.set_rotation(l, vmath.vector3(0,180,0))
+				else
+					gui.set_rotation(l, vmath.vector3(0,0,0))
+				end
+			end
+			if message.val then
+				local l=gui.get_node("act.cnt."..message.num)		
+				if l==nil then
+					local pos=vmath.vector3(24*(i-1)+12,screen_h-12,0.1)
+					addicon(self,"cnt."..message.val,"act.cnt."..message.num,pos,nil,inventory)
+				else
+					gui.play_flipbook(l,"cnt."..message.val)		
+				end
+			end
+		end
+	else
+		gui_on_message(self,message_id,message,sender)
+	end
+end

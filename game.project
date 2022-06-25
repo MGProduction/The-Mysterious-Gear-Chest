@@ -1,0 +1,77 @@
+[project]
+title = The Mysterious Gear Chest [jam version]
+version = 0.8.1
+custom_resources = /adv/main.json,/adv/json/
+developer = Marco Giorgini
+publisher = MG Production
+bundle_resources = /adv/res/
+dependencies#0 = https://github.com/subsoap/defos/archive/master.zip
+
+[bootstrap]
+main_collection = /game.collectionc
+render = /render/mg_lowres.renderc
+
+[input]
+game_binding = /input/game.input_bindingc
+use_accelerometer = 0
+gamepads = /builtins/input/default.gamepadsc
+
+[display]
+width = 960
+height = 720
+pixel_height = 200
+update_frequency = 30
+variable_dt = 1
+fullscreen = 0
+fixedsize = 0
+pixel_width = 120
+vsync = 0
+
+[physics]
+scale = 0.02
+
+[script]
+shared_state = 1
+
+[graphics]
+default_texture_min_filter = nearest
+default_texture_mag_filter = nearest
+
+[ios]
+launch_image_1024x768 = /resources/iOS/Default-1024x768.png
+launch_image_1242x2208 = /resources/iOS/Default-1242x2208.png
+launch_image_750x1334 = /resources/iOS/Default-750x1334.png
+launch_image_1334x750 = /resources/iOS/Default-1334x750.png
+launch_image_2208x1242 = /resources/iOS/Default-2208x1242.png
+launch_image_2048x1536 = /resources/iOS/Default-2048x1536.png
+launch_image_2048x2732 = /resources/iOS/Default-2048x2732.png
+launch_image_2732x2048 = /resources/iOS/Default-2732x2048.png
+launch_image_1125x2436 = /resources/iOS/Default-1125x2436.png
+launch_image_2436x1125 = /resources/iOS/Default-2436x1125.png
+bundle_identifier = com.marcogiorgini.themysteriousgearchest
+
+[windows]
+app_icon = /adv/icon/tmgc.ico
+
+[osx]
+bundle_identifier = com.marcogiorgini.themysteriousgearchest
+app_icon = /adv/icon/tmgc.icns
+infoplist = /builtins/manifests/osx/Info.plist
+
+[android]
+package = com.marcogiorgini.themysteriousgearchest
+app_icon_36x36 = /adv/icon/awava_icon_36x36.png
+app_icon_72x72 = /adv/icon/awava_icon_72x72.png
+app_icon_96x96 = /adv/icon/awava_icon_96x96.png
+app_icon_144x144 = /adv/icon/awava_icon_144x144.png
+app_icon_48x48 = /adv/icon/awava_icon_48x48.png
+app_icon_192x192 = /adv/icon/awava_icon_192x192.png
+immersive_mode = 1
+
+[html5]
+htmlfile = /builtins/manifests/web/engine_template.html
+cssfile = /builtins/manifests/web/dark_theme.css
+scale_mode = fit
+show_fullscreen_button = 0
+show_made_with_defold = 0
+

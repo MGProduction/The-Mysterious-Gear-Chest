@@ -1,0 +1,39 @@
+images {
+  image: "/adv/img/church_corsoduomo.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/church_epilogue.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/church_epilogue.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/church_seminariochiostro.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/church_seminariolibrary.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/church_seminariooffice.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/church_seminariooffice.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/void.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/black.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+margin: 1
+extrude_borders: 0
+inner_padding: 0

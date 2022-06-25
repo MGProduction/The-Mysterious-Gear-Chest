@@ -1,0 +1,68 @@
+key_trigger {
+  input: KEY_F2
+  action: "togglefullscreen"
+}
+key_trigger {
+  input: KEY_F3
+  action: "toggleaudio"
+}
+key_trigger {
+  input: KEY_ESC
+  action: "exitfullscreen"
+}
+key_trigger {
+  input: KEY_BACKSLASH
+  action: "back"
+}
+key_trigger {
+  input: KEY_S
+  action: "skipscene"
+}
+key_trigger {
+  input: KEY_LEFT
+  action: "goleft"
+}
+key_trigger {
+  input: KEY_RIGHT
+  action: "goright"
+}
+key_trigger {
+  input: KEY_LSHIFT
+  action: "quick"
+}
+key_trigger {
+  input: KEY_R
+  action: "roomreload"
+}
+key_trigger {
+  input: KEY_SPACE
+  action: "showhotspots"
+}
+key_trigger {
+  input: KEY_W
+  action: "walkthru"
+}
+mouse_trigger {
+  input: MOUSE_BUTTON_1
+  action: "click"
+}
+mouse_trigger {
+  input: MOUSE_BUTTON_2
+  action: "rightclick"
+}
+mouse_trigger {
+  input: MOUSE_BUTTON_RIGHT
+  action: "rightclick"
+}
+mouse_trigger {
+  input: MOUSE_BUTTON_MIDDLE
+  action: "rightclick"
+}
+gamepad_trigger {
+  input: GAMEPAD_LSTICK_LEFT
+  action: "goleft"
+}
+gamepad_trigger {
+  input: GAMEPAD_LSTICK_RIGHT
+  action: "goright"
+}

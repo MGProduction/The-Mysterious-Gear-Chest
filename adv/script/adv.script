@@ -1,0 +1,243 @@
+local config = require "adv/lua/config"
+local adv = require "adv/lua/adventure"
+local advcmd = require "adv/lua/cmd"
+
+function cmd_pause(self,bPause)
+	if bPause==false then
+		if adv.player then
+			msg.post("hud", "hud_enable",{enable=2})
+		end
+	else
+		msg.post("hud", "hud_enable",{enable=-1})
+	end
+	adv.bPause=bPause	
+end
+
+function init(self)
+
+	print("DAGS init...");
+	
+	hgui_init(self,nil,go.get_id())
+
+	local firstroom=adv.loadGame(self,"main")
+
+	print("firstroom:"..firstroom);
+	
+	adv.loadRoom(self,firstroom)	
+	
+	msg.post("hud", "hud_enable",{enable=0})
+		
+	msg.post(".", "acquire_input_focus")		
+	
+end
+
+function final(self)
+	
+	adv.unloadGame(self)
+	msg.post(".", "release_input_focus")
+end
+
+
+function update(self, dt)
+	adv.update(self,dt)	
+end
+
+function tablelength(T)
+	local count = 0
+	for _ in pairs(T) do count = count + 1 end
+	return count
+end
+
+function doback(self)
+	local backto=hgui_back(self)	
+	if adv.bPause == true then
+		if backto=="" then
+			cmd_pause(self,false)
+			msg.post("hud","dismissdlg")
+		end
+	end	
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id==hash("animationalert") then
+		adv.animationalert(self)
+	elseif message_id==hash("cameramovementalert") then
+		adv.cameramovementalert(self,message.alert)
+	elseif message_id==hash("movementalert") then
+		adv.movementalert(self,message.alert)
+	elseif message_id==hash("readytoload") then
+		adv.deleteRoom(self)
+		if adv.jumpto=="quit" then			
+			next_scene="loader#home"			
+			msg.post("game:/loader#game", "unload_scene", { position = go.get_position() })	
+		else			
+			adv.loadRoom(self,adv.jumpto)	
+		end
+	elseif message_id == hash("end") then
+		msg.post("@render:", "clear_color", { color = vmath.vector4(0,0,0, 0) })
+		msg.post("game:/loader#game", "unload_scene", { position = go.get_position() })	
+	elseif message_id==hash("endfadein") then	
+		local CMD=adv.cmds
+		if CMD.commands == nil then
+			local mask=1
+			if adv.player==nil then
+				mask=-3
+			else
+				mask=2
+			end
+			msg.post("hud", "hud_enable",{enable=mask})
+		else
+			msg.post("hud", "hud_enable",{enable=0})
+			adv.playcommands(self,adv.cmds)
+		end
+	elseif message_id==hash("btn_cmd") then		
+		if adv.bPause then
+			if message.cmd=="go_back" then
+				doback(self)
+			elseif message.cmd=="go_set" then
+				adv.dolearn(self,message.code)
+				doback(self)				
+			elseif message.cmd=="go_textspeed" then
+				config.talkspeed=tonumber(message.code)
+				doback(self)
+			elseif message.cmd=="go_loadroom" then
+				doback(self)
+				adv.jumpto=message.code			
+				adv.unloadRoom(self)
+			elseif message.cmd=="go_load" then
+				adv.load(self,"slot_"..message.code)
+				cmd_pause(self,false)
+				msg.post("hud","dismissdlg")
+				hgui_reset(self)
+			elseif message.cmd=="go_language" then
+				adv.setlanguage(self,message.code)
+				cmd_pause(self,false)
+				msg.post("hud","dismissdlg")
+				hgui_reset(self)
+			elseif message.cmd=="go_mousebuttons" then
+				adv.setmousebuttons(self,message.code)
+				cmd_pause(self,false)
+				msg.post("hud","dismissdlg")
+				hgui_reset(self)
+			elseif message.cmd=="go_save" then
+				adv.save(self,"slot_"..message.code)
+				local nm=""..adv.room
+				if adv.slotprefix then
+					nm=adv.slotprefix..message.code
+				else					
+					local nmx=adv.thelocations[nm]
+					if nmx==nil then
+						nmx=adv.thescenes[nm]
+					end
+					if nmx and nmx[1].desc then
+						local tnm=""..nmx[1].desc
+						if tnm=="" then
+						else
+							nm=tnm
+							local trad=adv.gettrad(self,"desc",nm)
+							if trad then
+								nm=trad
+							end
+						end
+					end
+					if adv.memory["time"] then
+						nm=nm.."."..adv.memory["time"]
+					end
+				end
+				config.saveslots[tonumber(message.code)]=nm
+				config.save(self)
+				cmd_pause(self,false)
+				msg.post("hud","dismissdlg")
+			elseif message.cmd=="go_quit" then
+				cmd_pause(self,false)
+				msg.post("hud","dismissdlg")
+				hgui_reset(self)				
+				adv.jumpto="home"	
+				adv.safereset()
+				adv.unloadRoom(self)				
+			elseif message.cmd=="go_toggle_audio" then
+				adv.toggle_audio(self,true,true,true)
+			elseif message.cmd=="go_toggle_music" then
+				adv.toggle_audio(self,true,false,true)
+			elseif message.cmd=="go_toggle_sound" then
+				adv.toggle_audio(self,false,true,true)
+			elseif message.cmd=="go_toggle_fullscreen" then
+				adv.toggle_fullscreen(self,true)
+				cmd_pause(self,false)
+				msg.post("hud","dismissdlg")
+				hgui_reset(self)
+			end
+		else
+			if message.cmd=="cmd_invleft" then
+				local count=tablelength(adv.myinventory)
+				if adv.inventory.grid.y == 1 then
+					if adv.inventory.base > 0 then
+						adv.inventory.base=adv.inventory.base-1
+						adv.updateinventory(self)
+					end	
+				elseif adv.inventory.base-adv.inventory.grid.x >= 0 then
+					adv.inventory.base=adv.inventory.base-adv.inventory.grid.x
+					adv.updateinventory(self)
+				end				
+			elseif message.cmd=="cmd_invright" then
+				local count=tablelength(adv.myinventory)
+				if adv.inventory.grid.y == 1 then
+					if adv.inventory.base + adv.inventory.grid.x < count then
+						adv.inventory.base=adv.inventory.base+1
+						adv.updateinventory(self)
+					end	
+				elseif adv.inventory.base + adv.inventory.grid.x <= count then
+					adv.inventory.base=adv.inventory.base+adv.inventory.grid.x
+					adv.updateinventory(self)
+				end							
+			else
+				local lprefix=message.cmd
+				local vrb=adv.verbs.list[message.cmd]
+				if vrb then
+					lprefix=vrb.text
+				end
+				msg.post("hud","setactionprefix",{cmd=message.cmd,prefix=lprefix})
+				adv.action=message.cmd		
+				adv.twoobjects=nil
+			end
+		end
+	elseif message_id == hash("btn_cmd_show") then	
+		if adv.bDialog == true then
+			local CMD=adv.cmds
+			--cmd_pause(self,false)			
+			adv.handledialog(self,message.what)			
+		else
+			if adv.bPause == false then
+				cmd_pause(self,true)
+			end			
+			hgui_show(self,message.what)
+		end
+	end
+end
+
+function on_input(self, action_id, action)
+	-- if dlgon then
+	-- else
+	if action_id == nil then
+		adv.handle_cursormovements(self,action)
+	elseif action_id == hash("showhotspots") and action.released then
+		if self.icallstack == 0 then
+			adv.showhotspots(self)
+		end
+	elseif action_id == hash("click") then
+		adv.handle_onclick(self,action,false)
+	elseif action_id == hash("rightclick") then
+		adv.handle_onclick(self,action,true)
+		return false
+	elseif action_id == hash("back") and action.released then
+		if self.icallstack == 0 then
+			msg.post(".","btn_cmd_show",{what="pause"})
+		else
+			msg.post(".","btn_cmd_go_back")			
+		end
+	else
+		adv.handle_onkeyevents(self,action_id,action)
+	end
+	-- end
+end
+

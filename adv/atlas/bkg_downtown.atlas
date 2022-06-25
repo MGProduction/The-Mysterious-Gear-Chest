@@ -1,0 +1,63 @@
+images {
+  image: "/adv/img/downtown_library.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/downtown_pub.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/downtown_santeufemia.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/marcos_hall.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/marcos_hall.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/marcos_room.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/marcos_room.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/saras_enricasroom.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/saras_enricasroom.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/saras_hall.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/saras_hall.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/saras_room.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/saras_room.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/void.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/black.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+margin: 1
+extrude_borders: 0
+inner_padding: 0

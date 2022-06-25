@@ -1,0 +1,39 @@
+images {
+  image: "/adv/img/academy_office.church_corsoduomo.opening.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/academy_office.coveredobject.uncovered.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/academy_office.mask.desk.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/academy_office.mask.leftdoor.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/academy_office.mask.lights.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/academy_office.obj.dossier.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/academy_office.obj.ring.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/void.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/black.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+margin: 1
+extrude_borders: 0
+inner_padding: 0

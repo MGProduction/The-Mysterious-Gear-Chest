@@ -1,0 +1,23 @@
+images {
+  image: "/adv/img/academy_office.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/academy_office.efx.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/iss_inside.bkg.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/void.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/adv/img/black.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+margin: 1
+extrude_borders: 0
+inner_padding: 0

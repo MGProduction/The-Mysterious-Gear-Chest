@@ -1,0 +1,31 @@
+loaded_scene=""
+
+function init(self)
+	-- Add initialization code here
+	-- Learn more: https://defold.com/manuals/script/
+	-- Remove this function if not needed
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Learn more: https://defold.com/manuals/script/
+	-- Remove this function if not needed
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("proxy_loaded") then
+		msg.post(sender, "init")
+		msg.post(sender, "enable")
+	elseif message_id == hash("load_room") then
+		loaded_room=message.name
+		msg.post(loaded_room, "load")
+	elseif message_id == hash("unload_room") then
+		loaded_room=message.name
+		msg.post(loaded_room, "disable")
+		msg.post(loaded_room, "final")
+		msg.post(loaded_room, "unload")
+	elseif message_id == hash("proxy_unloaded") then
+		--loaded_scene=next_scene
+		--msg.post(loaded_scene, "load")
+	end	
+end
