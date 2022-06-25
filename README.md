@@ -1,5 +1,7 @@
 # The-Mysterious-Gear-Chest
-The Mysterious Gear Chest (my #advjam2022 entry) #madewithdefold
+The Mysterious Gear Chest (my #advjam2022 entry) is a point-and-click pixel-art game #madewithdefold
+
+Offcial page: [https://marcogiorgini.itch.io/the-mysterious-gear-chest]
 
 # License
 The **framework code** (the Defold projects with its scripts and collections) is released under the **MIT Licence**
